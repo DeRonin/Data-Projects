@@ -1,0 +1,71 @@
+import codecademylib3
+import pandas as pd
+import numpy as np
+
+ad_clicks = pd.read_csv('ad_clicks.csv')
+
+#"First 5 rows of ad_clicks"
+print(ad_clicks.head(5))
+
+#Your manager wants to know which ad platform is getting you the most views.
+grouped = ad_clicks.groupby('utm_source').size().reset_index(name='count')
+print(grouped.sort_values(by="count",ascending=False))
+
+#Answer: Google with 680, followed by Facebook with 504, Email with 255 and finally Twitter with 215.
+
+#-----------------------------
+
+#Create a new column called is_click, which is True if ad_click_timestamp is not null and False otherwise.
+
+ad_clicks['is_click'] = ~ad_clicks.ad_click_timestamp.isnull()
+print(ad_clicks.head(5))
+
+#Grouping data 
+grouped_info = ad_clicks.groupby(["utm_source","is_click"])
+clicks_by_source = grouped_info.size().reset_index(name='user_id')
+print(clicks_by_source)
+
+#Pivoting data
+clicks_pivot = clicks_by_source.pivot (index="utm_source",columns = "is_click",values="user_id").reset_index()
+
+print(clicks_pivot)
+
+#Percent of data
+# There are more clicks on Facebook and google
+clicks_pivot['percent_clicked'] =  clicks_pivot[True] / (clicks_pivot[True] + clicks_pivot[False])
+
+print(clicks_pivot)
+
+#A/B test
+#Same number of people were shown both ADs
+ab_exp =  ad_clicks.groupby('experimental_group').size().reset_index(name='count')
+print(ab_exp.sort_values(by="count",ascending=False))
+
+#Pivot to see which (A or B) got more clicks
+ex_grouped_info = ad_clicks.groupby(["experimental_group","is_click"])
+AB_clicked = ex_grouped_info.size().reset_index(name='user_id')
+
+ex_clicks_pivot = AB_clicked.pivot (index="experimental_group",columns = "is_click",values="user_id").reset_index()
+ex_clicks_pivot['percent_clicked'] =  ex_clicks_pivot[True] / (ex_clicks_pivot[True] + ex_clicks_pivot[False])*100
+
+print(ex_clicks_pivot)
+
+#Separating the data between A group and B group
+a_clicks = ad_clicks[ad_clicks["experimental_group"] == "A"]
+b_clicks = ad_clicks[ad_clicks["experimental_group"] == "B"]
+
+print(a_clicks)
+
+A_click_day = a_clicks.groupby(["is_click","day"]).size().reset_index(name='People')
+
+A_clicks_pivot = A_click_day.pivot (index="day",columns = "is_click",values="People").reset_index()
+A_clicks_pivot["Percent_clicked"] = A_clicks_pivot[True] / (A_clicks_pivot[True] + A_clicks_pivot[False])*100
+print(A_clicks_pivot)
+
+B_click_day = b_clicks.groupby(["is_click","day"]).size().reset_index(name='People')
+
+B_clicks_pivot = B_click_day.pivot (index="day",columns = "is_click",values="People").reset_index()
+B_clicks_pivot["Percent_clicked"] = B_clicks_pivot[True] / (B_clicks_pivot[True] + B_clicks_pivot[False])*100
+print(B_clicks_pivot)
+
+# After comparing both results, it is clear that A has a bigger percentage of people clicking it in average during the week than B, so the company should go for the ADs showed to the A group
